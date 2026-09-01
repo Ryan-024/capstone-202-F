@@ -283,8 +283,8 @@ const conversionsOptions = computed(() => baseOptions(fmtPct))
 
 <template>
   <v-container fluid class="pa-6 pa-md-8">
-    <!-- Summary cards -->
-    <v-row dense>
+    <v-row>
+      <!-- Summary cards -->
       <v-col
         v-for="card in summaryCards"
         :key="card.key"
@@ -326,12 +326,10 @@ const conversionsOptions = computed(() => baseOptions(fmtPct))
           </div>
         </v-card>
       </v-col>
-    </v-row>
 
-    <!-- Two charts -->
-    <v-row dense class="mt-2">
+      <!-- Revenue chart -->
       <v-col cols="12" md="6">
-        <v-card color="surface" class="pa-5 dash-card">
+        <v-card color="surface" class="pa-5 h-100 dash-card">
           <div class="d-flex align-center mb-4">
             <v-icon icon="mdi-cash-multiple" color="#7c4dff" class="mr-2" />
             <span class="text-subtitle-1 font-weight-medium">
@@ -343,8 +341,10 @@ const conversionsOptions = computed(() => baseOptions(fmtPct))
           </div>
         </v-card>
       </v-col>
+
+      <!-- Visitors chart -->
       <v-col cols="12" md="6">
-        <v-card color="surface" class="pa-5 dash-card">
+        <v-card color="surface" class="pa-5 h-100 dash-card">
           <div class="d-flex align-center mb-4">
             <v-icon
               icon="mdi-account-group-outline"
@@ -360,10 +360,8 @@ const conversionsOptions = computed(() => baseOptions(fmtPct))
           </div>
         </v-card>
       </v-col>
-    </v-row>
 
-    <!-- Full-width conversions area chart -->
-    <v-row dense class="mt-2">
+      <!-- Full-width conversions area chart -->
       <v-col cols="12">
         <v-card color="surface" class="pa-5 dash-card">
           <div class="d-flex align-center mb-4">

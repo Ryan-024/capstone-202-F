@@ -7,7 +7,7 @@ const { selectedMonth, monthOptions } = useDashboardFilter()
 <template>
   <v-app>
     <v-app-bar color="surface" flat density="comfortable" class="border-b">
-      <v-container class="d-flex align-center pa-0" fluid>
+      <v-container class="d-flex align-center py-0 px-6 px-md-8" fluid>
         <v-app-bar-title class="font-weight-medium">
           <v-icon icon="mdi-view-dashboard-outline" class="mr-2 text-primary" />
           My Dashboard
