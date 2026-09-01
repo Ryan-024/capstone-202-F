@@ -1,19 +1,40 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { useDashboardFilter } from './composables/useDashboardFilter'
+
+const { selectedMonth, monthOptions } = useDashboardFilter()
+</script>
 
 <template>
   <v-app>
-    <v-app-bar color="primary" density="compact">
-      <v-app-bar-title>
-        <v-icon icon="mdi-view-dashboard" class="mr-2" />
-        my-dashboard
-      </v-app-bar-title>
-      <v-spacer />
-      <v-btn :to="{ name: 'home' }" prepend-icon="mdi-home">Home</v-btn>
-      <v-btn :to="{ name: 'about' }" prepend-icon="mdi-information">About</v-btn>
+    <v-app-bar color="surface" flat density="comfortable" class="border-b">
+      <v-container class="d-flex align-center pa-0" fluid>
+        <v-app-bar-title class="font-weight-medium">
+          <v-icon icon="mdi-view-dashboard-outline" class="mr-2 text-primary" />
+          My Dashboard
+        </v-app-bar-title>
+        <v-spacer />
+        <v-select
+          v-model="selectedMonth"
+          :items="monthOptions"
+          item-title="title"
+          item-value="value"
+          density="compact"
+          variant="outlined"
+          hide-details
+          prepend-inner-icon="mdi-calendar-month-outline"
+          style="max-width: 220px"
+        />
+      </v-container>
     </v-app-bar>
 
-    <v-main>
+    <v-main class="bg-background">
       <router-view />
     </v-main>
   </v-app>
 </template>
+
+<style scoped>
+.border-b {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+</style>
