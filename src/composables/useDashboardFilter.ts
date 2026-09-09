@@ -1,16 +1,49 @@
 import { computed, ref } from 'vue'
 import metricsData from '../data/metrics.json'
 
+export type Region = 'west' | 'central' | 'east'
+
+export interface RegionStats {
+  shipments: number
+  onTimeRate: number
+  revenue: number
+}
+
+export interface OpenException {
+  shipmentId: string
+  origin: string
+  destination: string
+  carrier: string
+  errorType: string
+  severity: 'Low' | 'Medium' | 'High' | 'Critical' | string
+  status: string
+  ageDays: number
+}
+
 export interface MonthMetric {
   month: string
   label: string
-  revenue: number
-  visitors: number
-  conversions: number
-  orders: number
+  shipmentVolume: {
+    ltl: number
+    ftl: number
+    parcel: number
+  }
+  onTimeDeliveryRate: number
+  regionalPerformance: Record<Region, RegionStats>
+  openExceptions: OpenException[]
 }
 
 export const metrics = metricsData as MonthMetric[]
+
+// Derived per-month helpers
+export function totalShipments(m: MonthMetric): number {
+  return m.shipmentVolume.ltl + m.shipmentVolume.ftl + m.shipmentVolume.parcel
+}
+
+export function totalRevenue(m: MonthMetric): number {
+  const r = m.regionalPerformance
+  return r.west.revenue + r.central.revenue + r.east.revenue
+}
 
 // null = "All months"
 const selectedMonth = ref<string | null>(null)

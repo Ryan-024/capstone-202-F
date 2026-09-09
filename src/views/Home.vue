@@ -13,7 +13,12 @@ import {
   Filler,
 } from 'chart.js'
 import type { ChartData, ChartOptions } from 'chart.js'
-import { useDashboardFilter } from '../composables/useDashboardFilter'
+import {
+  useDashboardFilter,
+  totalShipments,
+  totalRevenue,
+  type OpenException,
+} from '../composables/useDashboardFilter'
 
 ChartJS.register(
   Title,
@@ -37,9 +42,12 @@ const {
 // Cohesive palette
 const palette = {
   revenue: '#7c4dff',
-  visitors: '#4dd0e1',
-  conversions: '#ffb74d',
-  orders: '#81c784',
+  onTime: '#4dd0e1',
+  shipments: '#ffb74d',
+  exceptions: '#ef5350',
+  ltl: '#7c4dff',
+  ftl: '#4dd0e1',
+  parcel: '#ffb74d',
   grid: 'rgba(255,255,255,0.06)',
   ticks: 'rgba(255,255,255,0.6)',
   highlight: '#ffffff',
@@ -56,11 +64,18 @@ const fmtNumber = (n: number) => n.toLocaleString('en-US')
 const fmtPct = (n: number) => `${n.toFixed(1)}%`
 
 // Yearly aggregates
-const yearRevenue = computed(() => metrics.reduce((s, m) => s + m.revenue, 0))
-const yearVisitors = computed(() => metrics.reduce((s, m) => s + m.visitors, 0))
-const yearOrders = computed(() => metrics.reduce((s, m) => s + m.orders, 0))
-const avgConversions = computed(
-  () => metrics.reduce((s, m) => s + m.conversions, 0) / metrics.length,
+const yearRevenue = computed(() =>
+  metrics.reduce((s, m) => s + totalRevenue(m), 0),
+)
+const yearShipments = computed(() =>
+  metrics.reduce((s, m) => s + totalShipments(m), 0),
+)
+const yearExceptions = computed(() =>
+  metrics.reduce((s, m) => s + m.openExceptions.length, 0),
+)
+const avgOnTime = computed(
+  () =>
+    metrics.reduce((s, m) => s + m.onTimeDeliveryRate, 0) / metrics.length,
 )
 
 function pctDelta(current: number, previous: number) {
@@ -68,14 +83,41 @@ function pctDelta(current: number, previous: number) {
   return ((current - previous) / previous) * 100
 }
 
+type CardKey = 'revenue' | 'shipments' | 'onTime' | 'exceptions'
+
 interface SummaryCard {
-  key: 'revenue' | 'visitors' | 'conversions' | 'orders'
+  key: CardKey
   title: string
   icon: string
   color: string
   value: string
   delta: number | null
   deltaLabel: string
+  // For "delta good when down" (like exceptions), invert coloring
+  invertDelta?: boolean
+}
+
+const cardMeta: Record<
+  CardKey,
+  { title: string; icon: string; color: string; invertDelta?: boolean }
+> = {
+  revenue: { title: 'Revenue', icon: 'mdi-cash-multiple', color: palette.revenue },
+  shipments: {
+    title: 'Total Shipments',
+    icon: 'mdi-truck-fast-outline',
+    color: palette.shipments,
+  },
+  onTime: {
+    title: 'On-Time Delivery',
+    icon: 'mdi-clock-check-outline',
+    color: palette.onTime,
+  },
+  exceptions: {
+    title: 'Open Exceptions',
+    icon: 'mdi-alert-octagon-outline',
+    color: palette.exceptions,
+    invertDelta: true,
+  },
 }
 
 const summaryCards = computed<SummaryCard[]>(() => {
@@ -83,37 +125,29 @@ const summaryCards = computed<SummaryCard[]>(() => {
     return [
       {
         key: 'revenue',
-        title: 'Revenue',
-        icon: 'mdi-cash-multiple',
-        color: palette.revenue,
+        ...cardMeta.revenue,
         value: fmtCurrency(yearRevenue.value),
         delta: null,
         deltaLabel: 'Total for 2025',
       },
       {
-        key: 'visitors',
-        title: 'Visitors',
-        icon: 'mdi-account-group-outline',
-        color: palette.visitors,
-        value: fmtNumber(yearVisitors.value),
+        key: 'shipments',
+        ...cardMeta.shipments,
+        value: fmtNumber(yearShipments.value),
         delta: null,
         deltaLabel: 'Total for 2025',
       },
       {
-        key: 'conversions',
-        title: 'Conversions',
-        icon: 'mdi-swap-horizontal-bold',
-        color: palette.conversions,
-        value: fmtPct(avgConversions.value),
+        key: 'onTime',
+        ...cardMeta.onTime,
+        value: fmtPct(avgOnTime.value),
         delta: null,
         deltaLabel: 'Average for 2025',
       },
       {
-        key: 'orders',
-        title: 'Orders',
-        icon: 'mdi-cart-outline',
-        color: palette.orders,
-        value: fmtNumber(yearOrders.value),
+        key: 'exceptions',
+        ...cardMeta.exceptions,
+        value: fmtNumber(yearExceptions.value),
         delta: null,
         deltaLabel: 'Total for 2025',
       },
@@ -123,57 +157,35 @@ const summaryCards = computed<SummaryCard[]>(() => {
   const cur = selectedMetric.value!
   const prev = previousMetric.value
 
-  const build = (
-    key: SummaryCard['key'],
-    title: string,
-    icon: string,
-    color: string,
-    value: string,
-    curVal: number,
-  ): SummaryCard => ({
-    key,
-    title,
-    icon,
-    color,
-    value,
-    delta: prev ? pctDelta(curVal, prev[key]) : null,
-    deltaLabel: prev ? 'vs previous month' : 'First month',
-  })
+  const curVals: Record<CardKey, number> = {
+    revenue: totalRevenue(cur),
+    shipments: totalShipments(cur),
+    onTime: cur.onTimeDeliveryRate,
+    exceptions: cur.openExceptions.length,
+  }
+  const prevVals: Record<CardKey, number> | null = prev
+    ? {
+        revenue: totalRevenue(prev),
+        shipments: totalShipments(prev),
+        onTime: prev.onTimeDeliveryRate,
+        exceptions: prev.openExceptions.length,
+      }
+    : null
 
-  return [
-    build(
-      'revenue',
-      'Revenue',
-      'mdi-cash-multiple',
-      palette.revenue,
-      fmtCurrency(cur.revenue),
-      cur.revenue,
-    ),
-    build(
-      'visitors',
-      'Visitors',
-      'mdi-account-group-outline',
-      palette.visitors,
-      fmtNumber(cur.visitors),
-      cur.visitors,
-    ),
-    build(
-      'conversions',
-      'Conversions',
-      'mdi-swap-horizontal-bold',
-      palette.conversions,
-      fmtPct(cur.conversions),
-      cur.conversions,
-    ),
-    build(
-      'orders',
-      'Orders',
-      'mdi-cart-outline',
-      palette.orders,
-      fmtNumber(cur.orders),
-      cur.orders,
-    ),
-  ]
+  const formatters: Record<CardKey, (n: number) => string> = {
+    revenue: fmtCurrency,
+    shipments: fmtNumber,
+    onTime: fmtPct,
+    exceptions: fmtNumber,
+  }
+
+  return (Object.keys(cardMeta) as CardKey[]).map((key) => ({
+    key,
+    ...cardMeta[key],
+    value: formatters[key](curVals[key]),
+    delta: prevVals ? pctDelta(curVals[key], prevVals[key]) : null,
+    deltaLabel: prevVals ? 'vs previous month' : 'First month',
+  }))
 })
 
 // Highlight the selected month on the charts
@@ -191,7 +203,7 @@ const revenueChart = computed<ChartData<'line'>>(() => ({
   datasets: [
     {
       label: 'Revenue',
-      data: metrics.map((m) => m.revenue),
+      data: metrics.map((m) => totalRevenue(m)),
       borderColor: palette.revenue,
       backgroundColor: 'rgba(124,77,255,0.15)',
       pointBackgroundColor: palette.revenue,
@@ -205,16 +217,16 @@ const revenueChart = computed<ChartData<'line'>>(() => ({
   ],
 }))
 
-const visitorsChart = computed<ChartData<'line'>>(() => ({
+const onTimeChart = computed<ChartData<'line'>>(() => ({
   labels: labels.value,
   datasets: [
     {
-      label: 'Visitors',
-      data: metrics.map((m) => m.visitors),
-      borderColor: palette.visitors,
+      label: 'On-Time Delivery Rate',
+      data: metrics.map((m) => m.onTimeDeliveryRate),
+      borderColor: palette.onTime,
       backgroundColor: 'rgba(77,208,225,0.15)',
-      pointBackgroundColor: palette.visitors,
-      pointBorderColor: pointBorder(palette.visitors),
+      pointBackgroundColor: palette.onTime,
+      pointBorderColor: pointBorder(palette.onTime),
       pointRadius,
       pointHoverRadius: 8,
       tension: 0.35,
@@ -224,16 +236,16 @@ const visitorsChart = computed<ChartData<'line'>>(() => ({
   ],
 }))
 
-const conversionsChart = computed<ChartData<'line'>>(() => ({
+const shipmentsChart = computed<ChartData<'line'>>(() => ({
   labels: labels.value,
   datasets: [
     {
-      label: 'Conversions',
-      data: metrics.map((m) => m.conversions),
-      borderColor: palette.conversions,
+      label: 'Total Shipments',
+      data: metrics.map((m) => totalShipments(m)),
+      borderColor: palette.shipments,
       backgroundColor: 'rgba(255,183,77,0.20)',
-      pointBackgroundColor: palette.conversions,
-      pointBorderColor: pointBorder(palette.conversions),
+      pointBackgroundColor: palette.shipments,
+      pointBorderColor: pointBorder(palette.shipments),
       pointRadius,
       pointHoverRadius: 8,
       tension: 0.35,
@@ -277,8 +289,81 @@ function baseOptions(yFormatter: (v: number) => string): ChartOptions<'line'> {
 }
 
 const revenueOptions = computed(() => baseOptions(fmtCurrency))
-const visitorsOptions = computed(() => baseOptions(fmtNumber))
-const conversionsOptions = computed(() => baseOptions(fmtPct))
+const onTimeOptions = computed(() => baseOptions(fmtPct))
+const shipmentsOptions = computed(() => baseOptions(fmtNumber))
+
+// Exceptions table shown either for the selected month or across the year
+const exceptionsView = computed<
+  Array<OpenException & { month: string }>
+>(() => {
+  const source = isAll.value
+    ? metrics.flatMap((m) =>
+        m.openExceptions.map((e) => ({ ...e, month: m.label })),
+      )
+    : selectedMetric.value
+      ? selectedMetric.value.openExceptions.map((e) => ({
+          ...e,
+          month: selectedMetric.value!.label,
+        }))
+      : []
+  return [...source].sort((a, b) => b.ageDays - a.ageDays)
+})
+
+const severityColor: Record<string, string> = {
+  Low: 'grey',
+  Medium: 'warning',
+  High: 'orange-darken-2',
+  Critical: 'error',
+}
+
+const statusColor: Record<string, string> = {
+  Open: 'error',
+  'In Review': 'warning',
+  'Resolved Pending': 'success',
+}
+
+// Regional performance summary — averaged/summed across selection
+interface RegionRow {
+  region: string
+  shipments: number
+  onTimeRate: number
+  revenue: number
+}
+
+const regionalView = computed<RegionRow[]>(() => {
+  const source = isAll.value
+    ? metrics
+    : selectedMetric.value
+      ? [selectedMetric.value]
+      : []
+  if (source.length === 0) return []
+  const regions: Array<{ key: 'west' | 'central' | 'east'; label: string }> = [
+    { key: 'west', label: 'West' },
+    { key: 'central', label: 'Central' },
+    { key: 'east', label: 'East' },
+  ]
+  return regions.map((r) => {
+    const shipments = source.reduce(
+      (s, m) => s + m.regionalPerformance[r.key].shipments,
+      0,
+    )
+    const revenue = source.reduce(
+      (s, m) => s + m.regionalPerformance[r.key].revenue,
+      0,
+    )
+    const onTimeRate =
+      source.reduce(
+        (s, m) => s + m.regionalPerformance[r.key].onTimeRate,
+        0,
+      ) / source.length
+    return {
+      region: r.label,
+      shipments,
+      onTimeRate,
+      revenue,
+    }
+  })
+})
 </script>
 
 <template>
@@ -308,12 +393,20 @@ const conversionsOptions = computed(() => baseOptions(fmtPct))
                     ? 'mdi-arrow-top-right'
                     : 'mdi-arrow-bottom-right'
                 "
-                :color="card.delta >= 0 ? 'success' : 'error'"
+                :color="
+                  (card.invertDelta ? card.delta <= 0 : card.delta >= 0)
+                    ? 'success'
+                    : 'error'
+                "
                 size="16"
                 class="mr-1"
               />
               <span
-                :class="card.delta >= 0 ? 'text-success' : 'text-error'"
+                :class="
+                  (card.invertDelta ? card.delta <= 0 : card.delta >= 0)
+                    ? 'text-success'
+                    : 'text-error'
+                "
                 class="font-weight-medium mr-1"
               >
                 {{ card.delta >= 0 ? '+' : '' }}{{ card.delta.toFixed(1) }}%
@@ -342,41 +435,143 @@ const conversionsOptions = computed(() => baseOptions(fmtPct))
         </v-card>
       </v-col>
 
-      <!-- Visitors chart -->
+      <!-- On-Time Delivery chart -->
       <v-col cols="12" md="6">
         <v-card color="surface" class="pa-5 h-100 dash-card">
           <div class="d-flex align-center mb-4">
             <v-icon
-              icon="mdi-account-group-outline"
+              icon="mdi-clock-check-outline"
               color="#4dd0e1"
               class="mr-2"
             />
             <span class="text-subtitle-1 font-weight-medium">
-              Visitors Over Time
+              On-Time Delivery Rate
             </span>
           </div>
           <div style="height: 280px">
-            <Line :data="visitorsChart" :options="visitorsOptions" />
+            <Line :data="onTimeChart" :options="onTimeOptions" />
           </div>
         </v-card>
       </v-col>
 
-      <!-- Full-width conversions area chart -->
+      <!-- Full-width shipment volume area chart -->
       <v-col cols="12">
         <v-card color="surface" class="pa-5 dash-card">
           <div class="d-flex align-center mb-4">
             <v-icon
-              icon="mdi-swap-horizontal-bold"
+              icon="mdi-truck-fast-outline"
               color="#ffb74d"
               class="mr-2"
             />
             <span class="text-subtitle-1 font-weight-medium">
-              Conversions Trend
+              Shipment Volume Trend
             </span>
           </div>
           <div style="height: 280px">
-            <Line :data="conversionsChart" :options="conversionsOptions" />
+            <Line :data="shipmentsChart" :options="shipmentsOptions" />
           </div>
+        </v-card>
+      </v-col>
+
+      <!-- Regional performance -->
+      <v-col cols="12" md="5">
+        <v-card color="surface" class="pa-5 h-100 dash-card">
+          <div class="d-flex align-center mb-4">
+            <v-icon icon="mdi-map-outline" color="#81c784" class="mr-2" />
+            <span class="text-subtitle-1 font-weight-medium">
+              Regional Performance
+            </span>
+          </div>
+          <v-table density="comfortable" class="bg-transparent">
+            <thead>
+              <tr>
+                <th class="text-left">Region</th>
+                <th class="text-right">Shipments</th>
+                <th class="text-right">On-Time</th>
+                <th class="text-right">Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in regionalView" :key="row.region">
+                <td class="font-weight-medium">{{ row.region }}</td>
+                <td class="text-right">{{ fmtNumber(row.shipments) }}</td>
+                <td class="text-right">{{ fmtPct(row.onTimeRate) }}</td>
+                <td class="text-right">{{ fmtCurrency(row.revenue) }}</td>
+              </tr>
+            </tbody>
+          </v-table>
+        </v-card>
+      </v-col>
+
+      <!-- Open exceptions -->
+      <v-col cols="12" md="7">
+        <v-card color="surface" class="pa-5 h-100 dash-card">
+          <div class="d-flex align-center justify-space-between mb-4">
+            <div class="d-flex align-center">
+              <v-icon
+                icon="mdi-alert-octagon-outline"
+                color="#ef5350"
+                class="mr-2"
+              />
+              <span class="text-subtitle-1 font-weight-medium">
+                Open Exceptions
+              </span>
+            </div>
+            <v-chip size="small" variant="tonal" color="error">
+              {{ exceptionsView.length }} open
+            </v-chip>
+          </div>
+
+          <v-table density="compact" class="bg-transparent exceptions-table">
+            <thead>
+              <tr>
+                <th class="text-left">Shipment</th>
+                <th class="text-left">Lane</th>
+                <th class="text-left">Carrier</th>
+                <th class="text-left">Issue</th>
+                <th class="text-left">Severity</th>
+                <th class="text-left">Status</th>
+                <th class="text-right">Age</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="ex in exceptionsView"
+                :key="ex.shipmentId"
+              >
+                <td class="font-weight-medium">{{ ex.shipmentId }}</td>
+                <td class="text-medium-emphasis">
+                  {{ ex.origin }} → {{ ex.destination }}
+                </td>
+                <td>{{ ex.carrier }}</td>
+                <td>{{ ex.errorType }}</td>
+                <td>
+                  <v-chip
+                    size="x-small"
+                    variant="tonal"
+                    :color="severityColor[ex.severity] || 'grey'"
+                  >
+                    {{ ex.severity }}
+                  </v-chip>
+                </td>
+                <td>
+                  <v-chip
+                    size="x-small"
+                    variant="tonal"
+                    :color="statusColor[ex.status] || 'grey'"
+                  >
+                    {{ ex.status }}
+                  </v-chip>
+                </td>
+                <td class="text-right">{{ ex.ageDays }}d</td>
+              </tr>
+              <tr v-if="exceptionsView.length === 0">
+                <td colspan="7" class="text-center text-medium-emphasis py-4">
+                  No open exceptions
+                </td>
+              </tr>
+            </tbody>
+          </v-table>
         </v-card>
       </v-col>
     </v-row>
@@ -386,5 +581,15 @@ const conversionsOptions = computed(() => baseOptions(fmtPct))
 <style scoped>
 .dash-card {
   border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.exceptions-table :deep(th) {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.6);
+}
+.exceptions-table :deep(td),
+.exceptions-table :deep(th) {
+  white-space: nowrap;
 }
 </style>

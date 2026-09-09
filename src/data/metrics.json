@@ -1,14 +1,198 @@
 [
-  { "month": "2025-01", "label": "Jan", "revenue": 42780, "visitors": 18420, "conversions": 2.8, "orders": 522 },
-  { "month": "2025-02", "label": "Feb", "revenue": 41250, "visitors": 17180, "conversions": 2.6, "orders": 441 },
-  { "month": "2025-03", "label": "Mar", "revenue": 48930, "visitors": 21540, "conversions": 3.1, "orders": 673 },
-  { "month": "2025-04", "label": "Apr", "revenue": 52410, "visitors": 23810, "conversions": 3.4, "orders": 815 },
-  { "month": "2025-05", "label": "May", "revenue": 55720, "visitors": 26240, "conversions": 3.2, "orders": 831 },
-  { "month": "2025-06", "label": "Jun", "revenue": 61340, "visitors": 31380, "conversions": 3.0, "orders": 951 },
-  { "month": "2025-07", "label": "Jul", "revenue": 63870, "visitors": 33920, "conversions": 2.9, "orders": 976 },
-  { "month": "2025-08", "label": "Aug", "revenue": 59180, "visitors": 30710, "conversions": 3.3, "orders": 1024 },
-  { "month": "2025-09", "label": "Sep", "revenue": 57420, "visitors": 25640, "conversions": 3.7, "orders": 938 },
-  { "month": "2025-10", "label": "Oct", "revenue": 62110, "visitors": 24310, "conversions": 4.1, "orders": 1002 },
-  { "month": "2025-11", "label": "Nov", "revenue": 71640, "visitors": 28790, "conversions": 4.5, "orders": 1287 },
-  { "month": "2025-12", "label": "Dec", "revenue": 78920, "visitors": 32150, "conversions": 4.8, "orders": 1553 }
+  {
+    "month": "2025-01",
+    "label": "Jan",
+    "shipmentVolume": { "ltl": 4820, "ftl": 1210, "parcel": 9840 },
+    "onTimeDeliveryRate": 92.4,
+    "regionalPerformance": {
+      "west": { "shipments": 5210, "onTimeRate": 91.2, "revenue": 1245000 },
+      "central": { "shipments": 4870, "onTimeRate": 93.5, "revenue": 1108000 },
+      "east": { "shipments": 5790, "onTimeRate": 92.6, "revenue": 1362000 }
+    },
+    "openExceptions": [
+      { "shipmentId": "SHP-25010042", "origin": "Los Angeles, CA", "destination": "Phoenix, AZ", "carrier": "SwiftHaul", "errorType": "Delayed", "severity": "Medium", "status": "Open", "ageDays": 3 },
+      { "shipmentId": "SHP-25010128", "origin": "Dallas, TX", "destination": "Atlanta, GA", "carrier": "RoadRunner Freight", "errorType": "Damaged", "severity": "High", "status": "In Review", "ageDays": 6 },
+      { "shipmentId": "SHP-25010311", "origin": "Chicago, IL", "destination": "Detroit, MI", "carrier": "MidwestExpress", "errorType": "Lost", "severity": "Critical", "status": "Open", "ageDays": 9 }
+    ]
+  },
+  {
+    "month": "2025-02",
+    "label": "Feb",
+    "shipmentVolume": { "ltl": 4610, "ftl": 1150, "parcel": 9420 },
+    "onTimeDeliveryRate": 91.8,
+    "regionalPerformance": {
+      "west": { "shipments": 4980, "onTimeRate": 90.7, "revenue": 1187000 },
+      "central": { "shipments": 4720, "onTimeRate": 92.9, "revenue": 1074000 },
+      "east": { "shipments": 5480, "onTimeRate": 91.8, "revenue": 1298000 }
+    },
+    "openExceptions": [
+      { "shipmentId": "SHP-25020087", "origin": "Seattle, WA", "destination": "Portland, OR", "carrier": "PacificLine", "errorType": "Weather Delay", "severity": "Low", "status": "Open", "ageDays": 2 },
+      { "shipmentId": "SHP-25020204", "origin": "Miami, FL", "destination": "Charlotte, NC", "carrier": "CoastCargo", "errorType": "Delayed", "severity": "Medium", "status": "Open", "ageDays": 4 }
+    ]
+  },
+  {
+    "month": "2025-03",
+    "label": "Mar",
+    "shipmentVolume": { "ltl": 5210, "ftl": 1340, "parcel": 10620 },
+    "onTimeDeliveryRate": 93.1,
+    "regionalPerformance": {
+      "west": { "shipments": 5580, "onTimeRate": 92.4, "revenue": 1352000 },
+      "central": { "shipments": 5210, "onTimeRate": 94.1, "revenue": 1218000 },
+      "east": { "shipments": 6380, "onTimeRate": 92.8, "revenue": 1489000 }
+    },
+    "openExceptions": [
+      { "shipmentId": "SHP-25030019", "origin": "Denver, CO", "destination": "Salt Lake City, UT", "carrier": "MountainMove", "errorType": "Address Error", "severity": "Low", "status": "Resolved Pending", "ageDays": 1 },
+      { "shipmentId": "SHP-25030176", "origin": "Houston, TX", "destination": "New Orleans, LA", "carrier": "GulfFreight", "errorType": "Damaged", "severity": "High", "status": "Open", "ageDays": 5 },
+      { "shipmentId": "SHP-25030298", "origin": "Boston, MA", "destination": "Newark, NJ", "carrier": "EastEdge", "errorType": "Delayed", "severity": "Medium", "status": "In Review", "ageDays": 3 }
+    ]
+  },
+  {
+    "month": "2025-04",
+    "label": "Apr",
+    "shipmentVolume": { "ltl": 5490, "ftl": 1410, "parcel": 11230 },
+    "onTimeDeliveryRate": 93.7,
+    "regionalPerformance": {
+      "west": { "shipments": 5920, "onTimeRate": 93.0, "revenue": 1428000 },
+      "central": { "shipments": 5480, "onTimeRate": 94.6, "revenue": 1284000 },
+      "east": { "shipments": 6730, "onTimeRate": 93.5, "revenue": 1571000 }
+    },
+    "openExceptions": [
+      { "shipmentId": "SHP-25040055", "origin": "San Francisco, CA", "destination": "Las Vegas, NV", "carrier": "SwiftHaul", "errorType": "Delayed", "severity": "Low", "status": "Open", "ageDays": 2 },
+      { "shipmentId": "SHP-25040189", "origin": "Kansas City, MO", "destination": "Minneapolis, MN", "carrier": "MidwestExpress", "errorType": "Missing Documents", "severity": "Medium", "status": "In Review", "ageDays": 4 }
+    ]
+  },
+  {
+    "month": "2025-05",
+    "label": "May",
+    "shipmentVolume": { "ltl": 5730, "ftl": 1490, "parcel": 11810 },
+    "onTimeDeliveryRate": 94.2,
+    "regionalPerformance": {
+      "west": { "shipments": 6180, "onTimeRate": 93.7, "revenue": 1502000 },
+      "central": { "shipments": 5710, "onTimeRate": 95.0, "revenue": 1341000 },
+      "east": { "shipments": 7020, "onTimeRate": 93.9, "revenue": 1639000 }
+    },
+    "openExceptions": [
+      { "shipmentId": "SHP-25050033", "origin": "Phoenix, AZ", "destination": "Albuquerque, NM", "carrier": "DesertRoute", "errorType": "Delayed", "severity": "Medium", "status": "Open", "ageDays": 3 },
+      { "shipmentId": "SHP-25050144", "origin": "Nashville, TN", "destination": "Louisville, KY", "carrier": "SouthCentral Logistics", "errorType": "Damaged", "severity": "High", "status": "Open", "ageDays": 6 },
+      { "shipmentId": "SHP-25050267", "origin": "New York, NY", "destination": "Philadelphia, PA", "carrier": "EastEdge", "errorType": "Refused Delivery", "severity": "Medium", "status": "In Review", "ageDays": 2 }
+    ]
+  },
+  {
+    "month": "2025-06",
+    "label": "Jun",
+    "shipmentVolume": { "ltl": 6120, "ftl": 1610, "parcel": 12480 },
+    "onTimeDeliveryRate": 93.5,
+    "regionalPerformance": {
+      "west": { "shipments": 6480, "onTimeRate": 92.9, "revenue": 1584000 },
+      "central": { "shipments": 6010, "onTimeRate": 94.4, "revenue": 1409000 },
+      "east": { "shipments": 7420, "onTimeRate": 93.2, "revenue": 1731000 }
+    },
+    "openExceptions": [
+      { "shipmentId": "SHP-25060071", "origin": "Portland, OR", "destination": "Boise, ID", "carrier": "PacificLine", "errorType": "Weather Delay", "severity": "Medium", "status": "Open", "ageDays": 4 },
+      { "shipmentId": "SHP-25060218", "origin": "Indianapolis, IN", "destination": "Cincinnati, OH", "carrier": "MidwestExpress", "errorType": "Delayed", "severity": "Low", "status": "Open", "ageDays": 2 },
+      { "shipmentId": "SHP-25060332", "origin": "Jacksonville, FL", "destination": "Tampa, FL", "carrier": "CoastCargo", "errorType": "Lost", "severity": "Critical", "status": "In Review", "ageDays": 8 },
+      { "shipmentId": "SHP-25060411", "origin": "Baltimore, MD", "destination": "Richmond, VA", "carrier": "EastEdge", "errorType": "Damaged", "severity": "High", "status": "Open", "ageDays": 5 }
+    ]
+  },
+  {
+    "month": "2025-07",
+    "label": "Jul",
+    "shipmentVolume": { "ltl": 6280, "ftl": 1650, "parcel": 12910 },
+    "onTimeDeliveryRate": 92.8,
+    "regionalPerformance": {
+      "west": { "shipments": 6620, "onTimeRate": 92.1, "revenue": 1618000 },
+      "central": { "shipments": 6150, "onTimeRate": 93.7, "revenue": 1442000 },
+      "east": { "shipments": 7590, "onTimeRate": 92.6, "revenue": 1776000 }
+    },
+    "openExceptions": [
+      { "shipmentId": "SHP-25070089", "origin": "Los Angeles, CA", "destination": "San Diego, CA", "carrier": "SwiftHaul", "errorType": "Delayed", "severity": "Medium", "status": "Open", "ageDays": 3 },
+      { "shipmentId": "SHP-25070197", "origin": "St. Louis, MO", "destination": "Memphis, TN", "carrier": "SouthCentral Logistics", "errorType": "Address Error", "severity": "Low", "status": "Resolved Pending", "ageDays": 1 },
+      { "shipmentId": "SHP-25070288", "origin": "Charleston, SC", "destination": "Savannah, GA", "carrier": "CoastCargo", "errorType": "Damaged", "severity": "High", "status": "Open", "ageDays": 6 }
+    ]
+  },
+  {
+    "month": "2025-08",
+    "label": "Aug",
+    "shipmentVolume": { "ltl": 5980, "ftl": 1580, "parcel": 12340 },
+    "onTimeDeliveryRate": 93.4,
+    "regionalPerformance": {
+      "west": { "shipments": 6320, "onTimeRate": 92.8, "revenue": 1547000 },
+      "central": { "shipments": 5890, "onTimeRate": 94.2, "revenue": 1389000 },
+      "east": { "shipments": 7280, "onTimeRate": 93.1, "revenue": 1704000 }
+    },
+    "openExceptions": [
+      { "shipmentId": "SHP-25080042", "origin": "Sacramento, CA", "destination": "Reno, NV", "carrier": "SwiftHaul", "errorType": "Delayed", "severity": "Low", "status": "Open", "ageDays": 2 },
+      { "shipmentId": "SHP-25080166", "origin": "Omaha, NE", "destination": "Des Moines, IA", "carrier": "MidwestExpress", "errorType": "Missing Documents", "severity": "Medium", "status": "In Review", "ageDays": 4 }
+    ]
+  },
+  {
+    "month": "2025-09",
+    "label": "Sep",
+    "shipmentVolume": { "ltl": 5810, "ftl": 1530, "parcel": 11980 },
+    "onTimeDeliveryRate": 94.0,
+    "regionalPerformance": {
+      "west": { "shipments": 6110, "onTimeRate": 93.5, "revenue": 1498000 },
+      "central": { "shipments": 5720, "onTimeRate": 94.8, "revenue": 1348000 },
+      "east": { "shipments": 7060, "onTimeRate": 93.7, "revenue": 1652000 }
+    },
+    "openExceptions": [
+      { "shipmentId": "SHP-25090028", "origin": "Salt Lake City, UT", "destination": "Denver, CO", "carrier": "MountainMove", "errorType": "Delayed", "severity": "Medium", "status": "Open", "ageDays": 3 },
+      { "shipmentId": "SHP-25090154", "origin": "Oklahoma City, OK", "destination": "Little Rock, AR", "carrier": "SouthCentral Logistics", "errorType": "Damaged", "severity": "High", "status": "Open", "ageDays": 5 },
+      { "shipmentId": "SHP-25090271", "origin": "Pittsburgh, PA", "destination": "Cleveland, OH", "carrier": "EastEdge", "errorType": "Refused Delivery", "severity": "Medium", "status": "In Review", "ageDays": 2 }
+    ]
+  },
+  {
+    "month": "2025-10",
+    "label": "Oct",
+    "shipmentVolume": { "ltl": 6340, "ftl": 1680, "parcel": 13120 },
+    "onTimeDeliveryRate": 92.6,
+    "regionalPerformance": {
+      "west": { "shipments": 6710, "onTimeRate": 91.8, "revenue": 1648000 },
+      "central": { "shipments": 6240, "onTimeRate": 93.4, "revenue": 1468000 },
+      "east": { "shipments": 7710, "onTimeRate": 92.5, "revenue": 1802000 }
+    },
+    "openExceptions": [
+      { "shipmentId": "SHP-25100064", "origin": "Las Vegas, NV", "destination": "Phoenix, AZ", "carrier": "DesertRoute", "errorType": "Delayed", "severity": "Medium", "status": "Open", "ageDays": 4 },
+      { "shipmentId": "SHP-25100189", "origin": "Milwaukee, WI", "destination": "Chicago, IL", "carrier": "MidwestExpress", "errorType": "Damaged", "severity": "High", "status": "Open", "ageDays": 6 },
+      { "shipmentId": "SHP-25100302", "origin": "Orlando, FL", "destination": "Atlanta, GA", "carrier": "CoastCargo", "errorType": "Lost", "severity": "Critical", "status": "In Review", "ageDays": 9 },
+      { "shipmentId": "SHP-25100447", "origin": "Hartford, CT", "destination": "Boston, MA", "carrier": "EastEdge", "errorType": "Delayed", "severity": "Low", "status": "Open", "ageDays": 2 }
+    ]
+  },
+  {
+    "month": "2025-11",
+    "label": "Nov",
+    "shipmentVolume": { "ltl": 6890, "ftl": 1820, "parcel": 14380 },
+    "onTimeDeliveryRate": 91.5,
+    "regionalPerformance": {
+      "west": { "shipments": 7280, "onTimeRate": 90.7, "revenue": 1789000 },
+      "central": { "shipments": 6790, "onTimeRate": 92.3, "revenue": 1598000 },
+      "east": { "shipments": 8410, "onTimeRate": 91.4, "revenue": 1962000 }
+    },
+    "openExceptions": [
+      { "shipmentId": "SHP-25110058", "origin": "Los Angeles, CA", "destination": "Oakland, CA", "carrier": "SwiftHaul", "errorType": "Delayed", "severity": "Medium", "status": "Open", "ageDays": 4 },
+      { "shipmentId": "SHP-25110173", "origin": "Dallas, TX", "destination": "Houston, TX", "carrier": "RoadRunner Freight", "errorType": "Damaged", "severity": "High", "status": "Open", "ageDays": 7 },
+      { "shipmentId": "SHP-25110299", "origin": "Detroit, MI", "destination": "Toledo, OH", "carrier": "MidwestExpress", "errorType": "Missing Documents", "severity": "Medium", "status": "In Review", "ageDays": 3 },
+      { "shipmentId": "SHP-25110388", "origin": "Raleigh, NC", "destination": "Norfolk, VA", "carrier": "EastEdge", "errorType": "Refused Delivery", "severity": "Low", "status": "Open", "ageDays": 2 },
+      { "shipmentId": "SHP-25110462", "origin": "Miami, FL", "destination": "Jacksonville, FL", "carrier": "CoastCargo", "errorType": "Lost", "severity": "Critical", "status": "Open", "ageDays": 10 }
+    ]
+  },
+  {
+    "month": "2025-12",
+    "label": "Dec",
+    "shipmentVolume": { "ltl": 7420, "ftl": 1970, "parcel": 15680 },
+    "onTimeDeliveryRate": 90.8,
+    "regionalPerformance": {
+      "west": { "shipments": 7810, "onTimeRate": 89.9, "revenue": 1928000 },
+      "central": { "shipments": 7320, "onTimeRate": 91.6, "revenue": 1724000 },
+      "east": { "shipments": 9070, "onTimeRate": 90.8, "revenue": 2118000 }
+    },
+    "openExceptions": [
+      { "shipmentId": "SHP-25120071", "origin": "Seattle, WA", "destination": "Anchorage, AK", "carrier": "PacificLine", "errorType": "Weather Delay", "severity": "High", "status": "Open", "ageDays": 6 },
+      { "shipmentId": "SHP-25120184", "origin": "Chicago, IL", "destination": "Indianapolis, IN", "carrier": "MidwestExpress", "errorType": "Delayed", "severity": "Medium", "status": "Open", "ageDays": 4 },
+      { "shipmentId": "SHP-25120297", "origin": "New York, NY", "destination": "Buffalo, NY", "carrier": "EastEdge", "errorType": "Damaged", "severity": "High", "status": "In Review", "ageDays": 5 },
+      { "shipmentId": "SHP-25120389", "origin": "Atlanta, GA", "destination": "Birmingham, AL", "carrier": "SouthCentral Logistics", "errorType": "Address Error", "severity": "Low", "status": "Resolved Pending", "ageDays": 1 },
+      { "shipmentId": "SHP-25120458", "origin": "Denver, CO", "destination": "Cheyenne, WY", "carrier": "MountainMove", "errorType": "Weather Delay", "severity": "Medium", "status": "Open", "ageDays": 3 },
+      { "shipmentId": "SHP-25120521", "origin": "San Antonio, TX", "destination": "Austin, TX", "carrier": "RoadRunner Freight", "errorType": "Delayed", "severity": "Low", "status": "Open", "ageDays": 2 }
+    ]
+  }
 ]
