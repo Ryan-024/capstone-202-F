@@ -164,7 +164,6 @@ const summaryCards = computed<SummaryCard[]>(() => {
 
 // Highlight the selected month on the charts
 const labels = computed(() => metrics.map((m) => m.label))
-const onTimeData = computed(() => metrics.map((m) => m.onTimeDeliveryRate))
 const exceptionsData = computed(() =>
   metrics.map((m) => m.openExceptions.length),
 )
@@ -173,6 +172,7 @@ const exceptionsData = computed(() =>
 type ShipmentPeriod = 'daily' | 'weekly' | 'monthly' | 'quarterly'
 
 const shipmentPeriod = ref<ShipmentPeriod>('weekly')
+const onTimePeriod = ref<ShipmentPeriod>('weekly')
 
 const shipmentPeriodOptions: Array<{ label: string; value: ShipmentPeriod }> = [
   { label: 'Daily', value: 'daily' },
@@ -319,6 +319,110 @@ const shipmentsChartTitle = computed(() => {
     return `Daily Shipment Volume — ${dailyMonthLabel.value}`
   }
   return `${suffix} Shipment Volume`
+})
+
+/**
+ * Vary a percentage rate across `parts` buckets around `baseRate`, with a
+ * gentle nudge toward `nextRate` so week-over-week transitions between months
+ * feel continuous. Weekends receive a small penalty in the daily pattern to
+ * mimic thinner weekend staffing. Values are clamped to [0, 100].
+ */
+function varyRate(
+  baseRate: number,
+  parts: number,
+  seed: number,
+  pattern: 'week' | 'day',
+  nextRate?: number,
+): number[] {
+  const rand = mulberry32(seed)
+  const target = nextRate ?? baseRate
+  const out: number[] = []
+  for (let i = 0; i < parts; i++) {
+    const t = parts > 1 ? i / (parts - 1) : 0
+    // Interpolate 0..40% of the way toward next month to smooth transitions
+    const drift = (target - baseRate) * t * 0.4
+    let value = baseRate + drift
+    if (pattern === 'day') {
+      // Weekends: slightly lower on-time due to reduced staffing
+      const dow = i % 7
+      if (dow === 5 || dow === 6) value -= 1.2
+      // ±0.8pp jitter
+      value += (rand() - 0.5) * 1.6
+    } else {
+      // Weekly: ±0.7pp jitter
+      value += (rand() - 0.5) * 1.4
+    }
+    out.push(Math.max(0, Math.min(100, value)))
+  }
+  return out
+}
+
+const onTimeSeries = computed<Series>(() => {
+  const monthlyRates = metrics.map((m) => m.onTimeDeliveryRate)
+
+  if (onTimePeriod.value === 'monthly') {
+    return { labels: labels.value, data: monthlyRates }
+  }
+
+  if (onTimePeriod.value === 'quarterly') {
+    return {
+      labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+      data: [0, 1, 2, 3].map(
+        (q) =>
+          monthlyRates.slice(q * 3, q * 3 + 3).reduce((s, v) => s + v, 0) / 3,
+      ),
+    }
+  }
+
+  if (onTimePeriod.value === 'weekly') {
+    const wLabels: string[] = []
+    const wData: number[] = []
+    metrics.forEach((m, i) => {
+      const weeks = Math.round(daysInMonth[i] / 7)
+      const values = varyRate(
+        monthlyRates[i],
+        weeks,
+        i * 1000 + 71,
+        'week',
+        monthlyRates[i + 1],
+      )
+      for (let w = 0; w < weeks; w++) {
+        wLabels.push(`${m.label} W${w + 1}`)
+        wData.push(values[w])
+      }
+    })
+    return { labels: wLabels, data: wData }
+  }
+
+  // daily — one month at a time
+  const i = dailyMonthIndex.value
+  const values = varyRate(
+    monthlyRates[i],
+    daysInMonth[i],
+    i * 1000 + 311,
+    'day',
+    monthlyRates[i + 1],
+  )
+  const dLabels: string[] = []
+  const dData: number[] = []
+  for (let d = 0; d < daysInMonth[i]; d++) {
+    dLabels.push(String(d + 1))
+    dData.push(values[d])
+  }
+  return { labels: dLabels, data: dData }
+})
+
+const onTimeHighlightIndex = computed(() =>
+  !isAll.value && onTimePeriod.value === 'monthly' ? selectedIndex.value : -1,
+)
+
+const onTimeChartTitle = computed(() => {
+  const suffix =
+    onTimePeriod.value.charAt(0).toUpperCase() + onTimePeriod.value.slice(1)
+  if (onTimePeriod.value === 'daily') {
+    return `Daily On-Time Delivery Rate — ${dailyMonthLabel.value}`
+  }
+  return `${suffix} On-Time Delivery Rate`
 })
 
 // Regional performance summary — averaged/summed across selection
@@ -486,15 +590,65 @@ const regionalView = computed<RegionRow[]>(() => {
       <!-- On-Time Delivery chart -->
       <v-col cols="12" md="6">
         <LineChartCard
-          title="On-Time Delivery Rate"
+          :title="onTimeChartTitle"
           icon="mdi-clock-check-outline"
           :color="palette.onTime"
           dataset-label="On-Time Delivery Rate"
-          :labels="labels"
-          :data="onTimeData"
+          :labels="onTimeSeries.labels"
+          :data="onTimeSeries.data"
           :formatter="fmtPct"
-          :highlight-index="isAll ? -1 : selectedIndex"
-        />
+          :highlight-index="onTimeHighlightIndex"
+        >
+          <template #actions>
+            <div class="d-flex align-center ga-2">
+              <div
+                v-if="onTimePeriod === 'daily'"
+                class="d-flex align-center ga-1"
+              >
+                <v-btn
+                  icon="mdi-chevron-left"
+                  size="x-small"
+                  variant="text"
+                  :disabled="!canPrevDailyMonth"
+                  aria-label="Previous month"
+                  @click="shiftDailyMonth(-1)"
+                />
+                <span
+                  class="text-caption font-weight-medium"
+                  style="min-width: 72px; text-align: center"
+                >
+                  {{ dailyMonthLabel }}
+                </span>
+                <v-btn
+                  icon="mdi-chevron-right"
+                  size="x-small"
+                  variant="text"
+                  :disabled="!canNextDailyMonth"
+                  aria-label="Next month"
+                  @click="shiftDailyMonth(1)"
+                />
+              </div>
+              <v-btn-toggle
+                v-model="onTimePeriod"
+                density="compact"
+                variant="outlined"
+                mandatory
+                divided
+                color="primary"
+              >
+                <v-btn
+                  v-for="opt in shipmentPeriodOptions"
+                  :key="opt.value"
+                  :value="opt.value"
+                  size="x-small"
+                  class="text-caption"
+                >
+                  {{ opt.label }}
+                </v-btn>
+              </v-btn-toggle>
+            </div>
+          </template>
+        </LineChartCard>
       </v-col>
 
       <!-- Full-width open exceptions area chart -->
