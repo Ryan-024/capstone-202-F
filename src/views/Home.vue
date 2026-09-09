@@ -17,7 +17,6 @@ import {
   useDashboardFilter,
   totalShipments,
   totalRevenue,
-  type OpenException,
 } from '../composables/useDashboardFilter'
 
 ChartJS.register(
@@ -83,7 +82,7 @@ function pctDelta(current: number, previous: number) {
   return ((current - previous) / previous) * 100
 }
 
-type CardKey = 'revenue' | 'shipments' | 'onTime' | 'exceptions'
+type CardKey = 'shipments' | 'onTime' | 'regional' | 'exceptions'
 
 interface SummaryCard {
   key: CardKey
@@ -101,9 +100,8 @@ const cardMeta: Record<
   CardKey,
   { title: string; icon: string; color: string; invertDelta?: boolean }
 > = {
-  revenue: { title: 'Revenue', icon: 'mdi-cash-multiple', color: palette.revenue },
   shipments: {
-    title: 'Total Shipments',
+    title: 'Shipment Volume',
     icon: 'mdi-truck-fast-outline',
     color: palette.shipments,
   },
@@ -111,6 +109,11 @@ const cardMeta: Record<
     title: 'On-Time Delivery',
     icon: 'mdi-clock-check-outline',
     color: palette.onTime,
+  },
+  regional: {
+    title: 'Regional Performance',
+    icon: 'mdi-map-outline',
+    color: palette.revenue,
   },
   exceptions: {
     title: 'Open Exceptions',
@@ -123,13 +126,6 @@ const cardMeta: Record<
 const summaryCards = computed<SummaryCard[]>(() => {
   if (isAll.value) {
     return [
-      {
-        key: 'revenue',
-        ...cardMeta.revenue,
-        value: fmtCurrency(yearRevenue.value),
-        delta: null,
-        deltaLabel: 'Total for 2025',
-      },
       {
         key: 'shipments',
         ...cardMeta.shipments,
@@ -145,6 +141,13 @@ const summaryCards = computed<SummaryCard[]>(() => {
         deltaLabel: 'Average for 2025',
       },
       {
+        key: 'regional',
+        ...cardMeta.regional,
+        value: fmtCurrency(yearRevenue.value),
+        delta: null,
+        deltaLabel: 'Total regional revenue',
+      },
+      {
         key: 'exceptions',
         ...cardMeta.exceptions,
         value: fmtNumber(yearExceptions.value),
@@ -158,24 +161,24 @@ const summaryCards = computed<SummaryCard[]>(() => {
   const prev = previousMetric.value
 
   const curVals: Record<CardKey, number> = {
-    revenue: totalRevenue(cur),
     shipments: totalShipments(cur),
     onTime: cur.onTimeDeliveryRate,
+    regional: totalRevenue(cur),
     exceptions: cur.openExceptions.length,
   }
   const prevVals: Record<CardKey, number> | null = prev
     ? {
-        revenue: totalRevenue(prev),
         shipments: totalShipments(prev),
         onTime: prev.onTimeDeliveryRate,
+        regional: totalRevenue(prev),
         exceptions: prev.openExceptions.length,
       }
     : null
 
   const formatters: Record<CardKey, (n: number) => string> = {
-    revenue: fmtCurrency,
     shipments: fmtNumber,
     onTime: fmtPct,
+    regional: fmtCurrency,
     exceptions: fmtNumber,
   }
 
@@ -198,16 +201,16 @@ const pointBorder = (color: string) => (ctx: { dataIndex: number }) =>
 
 const labels = computed(() => metrics.map((m) => m.label))
 
-const revenueChart = computed<ChartData<'line'>>(() => ({
+const shipmentsChart = computed<ChartData<'line'>>(() => ({
   labels: labels.value,
   datasets: [
     {
-      label: 'Revenue',
-      data: metrics.map((m) => totalRevenue(m)),
-      borderColor: palette.revenue,
-      backgroundColor: 'rgba(124,77,255,0.15)',
-      pointBackgroundColor: palette.revenue,
-      pointBorderColor: pointBorder(palette.revenue),
+      label: 'Total Shipments',
+      data: metrics.map((m) => totalShipments(m)),
+      borderColor: palette.shipments,
+      backgroundColor: 'rgba(255,183,77,0.15)',
+      pointBackgroundColor: palette.shipments,
+      pointBorderColor: pointBorder(palette.shipments),
       pointRadius,
       pointHoverRadius: 8,
       tension: 0.35,
@@ -236,16 +239,16 @@ const onTimeChart = computed<ChartData<'line'>>(() => ({
   ],
 }))
 
-const shipmentsChart = computed<ChartData<'line'>>(() => ({
+const exceptionsChart = computed<ChartData<'line'>>(() => ({
   labels: labels.value,
   datasets: [
     {
-      label: 'Total Shipments',
-      data: metrics.map((m) => totalShipments(m)),
-      borderColor: palette.shipments,
-      backgroundColor: 'rgba(255,183,77,0.20)',
-      pointBackgroundColor: palette.shipments,
-      pointBorderColor: pointBorder(palette.shipments),
+      label: 'Open Exceptions',
+      data: metrics.map((m) => m.openExceptions.length),
+      borderColor: palette.exceptions,
+      backgroundColor: 'rgba(239,83,80,0.20)',
+      pointBackgroundColor: palette.exceptions,
+      pointBorderColor: pointBorder(palette.exceptions),
       pointRadius,
       pointHoverRadius: 8,
       tension: 0.35,
@@ -288,39 +291,9 @@ function baseOptions(yFormatter: (v: number) => string): ChartOptions<'line'> {
   }
 }
 
-const revenueOptions = computed(() => baseOptions(fmtCurrency))
-const onTimeOptions = computed(() => baseOptions(fmtPct))
 const shipmentsOptions = computed(() => baseOptions(fmtNumber))
-
-// Exceptions table shown either for the selected month or across the year
-const exceptionsView = computed<
-  Array<OpenException & { month: string }>
->(() => {
-  const source = isAll.value
-    ? metrics.flatMap((m) =>
-        m.openExceptions.map((e) => ({ ...e, month: m.label })),
-      )
-    : selectedMetric.value
-      ? selectedMetric.value.openExceptions.map((e) => ({
-          ...e,
-          month: selectedMetric.value!.label,
-        }))
-      : []
-  return [...source].sort((a, b) => b.ageDays - a.ageDays)
-})
-
-const severityColor: Record<string, string> = {
-  Low: 'grey',
-  Medium: 'warning',
-  High: 'orange-darken-2',
-  Critical: 'error',
-}
-
-const statusColor: Record<string, string> = {
-  Open: 'error',
-  'In Review': 'warning',
-  'Resolved Pending': 'success',
-}
+const onTimeOptions = computed(() => baseOptions(fmtPct))
+const exceptionsOptions = computed(() => baseOptions(fmtNumber))
 
 // Regional performance summary — averaged/summed across selection
 interface RegionRow {
@@ -420,17 +393,21 @@ const regionalView = computed<RegionRow[]>(() => {
         </v-card>
       </v-col>
 
-      <!-- Revenue chart -->
+      <!-- Shipment volume chart -->
       <v-col cols="12" md="6">
         <v-card color="surface" class="pa-5 h-100 dash-card">
           <div class="d-flex align-center mb-4">
-            <v-icon icon="mdi-cash-multiple" color="#7c4dff" class="mr-2" />
+            <v-icon
+              icon="mdi-truck-fast-outline"
+              color="#ffb74d"
+              class="mr-2"
+            />
             <span class="text-subtitle-1 font-weight-medium">
-              Monthly Revenue
+              Monthly Shipment Volume
             </span>
           </div>
           <div style="height: 280px">
-            <Line :data="revenueChart" :options="revenueOptions" />
+            <Line :data="shipmentsChart" :options="shipmentsOptions" />
           </div>
         </v-card>
       </v-col>
@@ -454,28 +431,28 @@ const regionalView = computed<RegionRow[]>(() => {
         </v-card>
       </v-col>
 
-      <!-- Full-width shipment volume area chart -->
+      <!-- Full-width open exceptions area chart -->
       <v-col cols="12">
         <v-card color="surface" class="pa-5 dash-card">
           <div class="d-flex align-center mb-4">
             <v-icon
-              icon="mdi-truck-fast-outline"
-              color="#ffb74d"
+              icon="mdi-alert-octagon-outline"
+              color="#ef5350"
               class="mr-2"
             />
             <span class="text-subtitle-1 font-weight-medium">
-              Shipment Volume Trend
+              Open Exceptions Trend
             </span>
           </div>
           <div style="height: 280px">
-            <Line :data="shipmentsChart" :options="shipmentsOptions" />
+            <Line :data="exceptionsChart" :options="exceptionsOptions" />
           </div>
         </v-card>
       </v-col>
 
-      <!-- Regional performance -->
-      <v-col cols="12" md="5">
-        <v-card color="surface" class="pa-5 h-100 dash-card">
+      <!-- Full-width regional performance table -->
+      <v-col cols="12">
+        <v-card color="surface" class="pa-5 dash-card">
           <div class="d-flex align-center mb-4">
             <v-icon icon="mdi-map-outline" color="#81c784" class="mr-2" />
             <span class="text-subtitle-1 font-weight-medium">
@@ -502,78 +479,6 @@ const regionalView = computed<RegionRow[]>(() => {
           </v-table>
         </v-card>
       </v-col>
-
-      <!-- Open exceptions -->
-      <v-col cols="12" md="7">
-        <v-card color="surface" class="pa-5 h-100 dash-card">
-          <div class="d-flex align-center justify-space-between mb-4">
-            <div class="d-flex align-center">
-              <v-icon
-                icon="mdi-alert-octagon-outline"
-                color="#ef5350"
-                class="mr-2"
-              />
-              <span class="text-subtitle-1 font-weight-medium">
-                Open Exceptions
-              </span>
-            </div>
-            <v-chip size="small" variant="tonal" color="error">
-              {{ exceptionsView.length }} open
-            </v-chip>
-          </div>
-
-          <v-table density="compact" class="bg-transparent exceptions-table">
-            <thead>
-              <tr>
-                <th class="text-left">Shipment</th>
-                <th class="text-left">Lane</th>
-                <th class="text-left">Carrier</th>
-                <th class="text-left">Issue</th>
-                <th class="text-left">Severity</th>
-                <th class="text-left">Status</th>
-                <th class="text-right">Age</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="ex in exceptionsView"
-                :key="ex.shipmentId"
-              >
-                <td class="font-weight-medium">{{ ex.shipmentId }}</td>
-                <td class="text-medium-emphasis">
-                  {{ ex.origin }} → {{ ex.destination }}
-                </td>
-                <td>{{ ex.carrier }}</td>
-                <td>{{ ex.errorType }}</td>
-                <td>
-                  <v-chip
-                    size="x-small"
-                    variant="tonal"
-                    :color="severityColor[ex.severity] || 'grey'"
-                  >
-                    {{ ex.severity }}
-                  </v-chip>
-                </td>
-                <td>
-                  <v-chip
-                    size="x-small"
-                    variant="tonal"
-                    :color="statusColor[ex.status] || 'grey'"
-                  >
-                    {{ ex.status }}
-                  </v-chip>
-                </td>
-                <td class="text-right">{{ ex.ageDays }}d</td>
-              </tr>
-              <tr v-if="exceptionsView.length === 0">
-                <td colspan="7" class="text-center text-medium-emphasis py-4">
-                  No open exceptions
-                </td>
-              </tr>
-            </tbody>
-          </v-table>
-        </v-card>
-      </v-col>
     </v-row>
   </v-container>
 </template>
@@ -581,15 +486,5 @@ const regionalView = computed<RegionRow[]>(() => {
 <style scoped>
 .dash-card {
   border: 1px solid rgba(255, 255, 255, 0.05);
-}
-.exceptions-table :deep(th) {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.6);
-}
-.exceptions-table :deep(td),
-.exceptions-table :deep(th) {
-  white-space: nowrap;
 }
 </style>
