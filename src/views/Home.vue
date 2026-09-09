@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import LineChartCard from '../components/LineChartCard.vue'
 import {
   useDashboardFilter,
@@ -181,6 +181,28 @@ const shipmentPeriodOptions: Array<{ label: string; value: ShipmentPeriod }> = [
   { label: 'Quarterly', value: 'quarterly' },
 ]
 
+// Daily view scrubs one month at a time; keep it in sync with the app-bar
+// month picker when the user selects a specific month, otherwise remember
+// whatever the user last scrolled to.
+const dailyMonthIndex = ref(0)
+watch(selectedIndex, (i) => {
+  if (i >= 0) dailyMonthIndex.value = i
+})
+
+function shiftDailyMonth(delta: number) {
+  const next = dailyMonthIndex.value + delta
+  if (next < 0 || next > metrics.length - 1) return
+  dailyMonthIndex.value = next
+}
+
+const canPrevDailyMonth = computed(() => dailyMonthIndex.value > 0)
+const canNextDailyMonth = computed(
+  () => dailyMonthIndex.value < metrics.length - 1,
+)
+const dailyMonthLabel = computed(
+  () => `${metrics[dailyMonthIndex.value].label} 2025`,
+)
+
 // 2025 is not a leap year
 const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
@@ -272,16 +294,15 @@ const shipmentSeries = computed<Series>(() => {
     return { labels: wLabels, data: wData }
   }
 
-  // daily
+  // daily — one month at a time
+  const i = dailyMonthIndex.value
+  const values = distribute(monthly[i], daysInMonth[i], i * 1000 + 31, 'day')
   const dLabels: string[] = []
   const dData: number[] = []
-  metrics.forEach((m, i) => {
-    const values = distribute(monthly[i], daysInMonth[i], i * 1000 + 31, 'day')
-    for (let d = 0; d < daysInMonth[i]; d++) {
-      dLabels.push(`${m.label} ${d + 1}`)
-      dData.push(values[d])
-    }
-  })
+  for (let d = 0; d < daysInMonth[i]; d++) {
+    dLabels.push(String(d + 1))
+    dData.push(values[d])
+  }
   return { labels: dLabels, data: dData }
 })
 
@@ -294,6 +315,9 @@ const shipmentsChartTitle = computed(() => {
   const suffix =
     shipmentPeriod.value.charAt(0).toUpperCase() +
     shipmentPeriod.value.slice(1)
+  if (shipmentPeriod.value === 'daily') {
+    return `Daily Shipment Volume — ${dailyMonthLabel.value}`
+  }
   return `${suffix} Shipment Volume`
 })
 
@@ -408,24 +432,53 @@ const regionalView = computed<RegionRow[]>(() => {
           :highlight-index="shipmentsHighlightIndex"
         >
           <template #actions>
-            <v-btn-toggle
-              v-model="shipmentPeriod"
-              density="compact"
-              variant="outlined"
-              mandatory
-              divided
-              color="primary"
-            >
-              <v-btn
-                v-for="opt in shipmentPeriodOptions"
-                :key="opt.value"
-                :value="opt.value"
-                size="x-small"
-                class="text-caption"
+            <div class="d-flex align-center ga-2">
+              <div
+                v-if="shipmentPeriod === 'daily'"
+                class="d-flex align-center ga-1"
               >
-                {{ opt.label }}
-              </v-btn>
-            </v-btn-toggle>
+                <v-btn
+                  icon="mdi-chevron-left"
+                  size="x-small"
+                  variant="text"
+                  :disabled="!canPrevDailyMonth"
+                  aria-label="Previous month"
+                  @click="shiftDailyMonth(-1)"
+                />
+                <span
+                  class="text-caption font-weight-medium"
+                  style="min-width: 72px; text-align: center"
+                >
+                  {{ dailyMonthLabel }}
+                </span>
+                <v-btn
+                  icon="mdi-chevron-right"
+                  size="x-small"
+                  variant="text"
+                  :disabled="!canNextDailyMonth"
+                  aria-label="Next month"
+                  @click="shiftDailyMonth(1)"
+                />
+              </div>
+              <v-btn-toggle
+                v-model="shipmentPeriod"
+                density="compact"
+                variant="outlined"
+                mandatory
+                divided
+                color="primary"
+              >
+                <v-btn
+                  v-for="opt in shipmentPeriodOptions"
+                  :key="opt.value"
+                  :value="opt.value"
+                  size="x-small"
+                  class="text-caption"
+                >
+                  {{ opt.label }}
+                </v-btn>
+              </v-btn-toggle>
+            </div>
           </template>
         </LineChartCard>
       </v-col>
