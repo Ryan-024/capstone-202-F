@@ -18,11 +18,12 @@ Generate a fake dataset as a JSON file (src/datametrics.json).
 - When a specific month is selected, all cards and charts 
     filter to the month. When "All" is selected, show the full year.
 - Below the app bar: a row of 4 summary cards (v-card) showing
-    the key metrics - revenue, visitors, conversions, orders
+    the key metrics - shipment volume, on-time delivery rates, regional performance, open exceptions
 - Below the cards: a row of 2 charts
-    - Left: Line chart showing monthly revenue
-    - Right: Line chart showing visitors over time
-- Below that: one full-width area chart showing conversions trend
+    - Left: Line chart showing monthly shipment volume
+    - Right: Line chart showing monthly on-time delivery rates
+- Below that: one full-width area chart showing open exceptions data
+- Below that: another full-width area table showing regional performance across the 3 different regions
 - Use v-container, v-row, v-col for responsive grid layout
 
 ## Interactions
