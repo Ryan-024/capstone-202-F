@@ -1,34 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Line } from 'vue-chartjs'
-import {
-  Chart as ChartJS,
-  Title,
-  Tooltip,
-  Legend,
-  LineElement,
-  PointElement,
-  CategoryScale,
-  LinearScale,
-  Filler,
-} from 'chart.js'
-import type { ChartData, ChartOptions } from 'chart.js'
+import LineChartCard from '../components/LineChartCard.vue'
 import {
   useDashboardFilter,
   totalShipments,
   totalRevenue,
 } from '../composables/useDashboardFilter'
-
-ChartJS.register(
-  Title,
-  Tooltip,
-  Legend,
-  LineElement,
-  PointElement,
-  CategoryScale,
-  LinearScale,
-  Filler,
-)
 
 const {
   metrics,
@@ -44,12 +21,6 @@ const palette = {
   onTime: '#4dd0e1',
   shipments: '#ffb74d',
   exceptions: '#ef5350',
-  ltl: '#7c4dff',
-  ftl: '#4dd0e1',
-  parcel: '#ffb74d',
-  grid: 'rgba(255,255,255,0.06)',
-  ticks: 'rgba(255,255,255,0.6)',
-  highlight: '#ffffff',
 }
 
 // Formatters
@@ -192,108 +163,12 @@ const summaryCards = computed<SummaryCard[]>(() => {
 })
 
 // Highlight the selected month on the charts
-const pointRadius = (ctx: { dataIndex: number }) =>
-  !isAll.value && ctx.dataIndex === selectedIndex.value ? 7 : 3
-const pointBorder = (color: string) => (ctx: { dataIndex: number }) =>
-  !isAll.value && ctx.dataIndex === selectedIndex.value
-    ? palette.highlight
-    : color
-
 const labels = computed(() => metrics.map((m) => m.label))
-
-const shipmentsChart = computed<ChartData<'line'>>(() => ({
-  labels: labels.value,
-  datasets: [
-    {
-      label: 'Total Shipments',
-      data: metrics.map((m) => totalShipments(m)),
-      borderColor: palette.shipments,
-      backgroundColor: 'rgba(255,183,77,0.15)',
-      pointBackgroundColor: palette.shipments,
-      pointBorderColor: pointBorder(palette.shipments),
-      pointRadius,
-      pointHoverRadius: 8,
-      tension: 0.35,
-      borderWidth: 2,
-      fill: false,
-    },
-  ],
-}))
-
-const onTimeChart = computed<ChartData<'line'>>(() => ({
-  labels: labels.value,
-  datasets: [
-    {
-      label: 'On-Time Delivery Rate',
-      data: metrics.map((m) => m.onTimeDeliveryRate),
-      borderColor: palette.onTime,
-      backgroundColor: 'rgba(77,208,225,0.15)',
-      pointBackgroundColor: palette.onTime,
-      pointBorderColor: pointBorder(palette.onTime),
-      pointRadius,
-      pointHoverRadius: 8,
-      tension: 0.35,
-      borderWidth: 2,
-      fill: false,
-    },
-  ],
-}))
-
-const exceptionsChart = computed<ChartData<'line'>>(() => ({
-  labels: labels.value,
-  datasets: [
-    {
-      label: 'Open Exceptions',
-      data: metrics.map((m) => m.openExceptions.length),
-      borderColor: palette.exceptions,
-      backgroundColor: 'rgba(239,83,80,0.20)',
-      pointBackgroundColor: palette.exceptions,
-      pointBorderColor: pointBorder(palette.exceptions),
-      pointRadius,
-      pointHoverRadius: 8,
-      tension: 0.35,
-      borderWidth: 2,
-      fill: true,
-    },
-  ],
-}))
-
-function baseOptions(yFormatter: (v: number) => string): ChartOptions<'line'> {
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: { intersect: false, mode: 'index' },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: '#1f2028',
-        borderColor: 'rgba(255,255,255,0.1)',
-        borderWidth: 1,
-        callbacks: {
-          label: (ctx) =>
-            `${ctx.dataset.label}: ${yFormatter(Number(ctx.parsed.y ?? 0))}`,
-        },
-      },
-    },
-    scales: {
-      x: {
-        grid: { color: palette.grid },
-        ticks: { color: palette.ticks },
-      },
-      y: {
-        grid: { color: palette.grid },
-        ticks: {
-          color: palette.ticks,
-          callback: (v) => yFormatter(Number(v)),
-        },
-      },
-    },
-  }
-}
-
-const shipmentsOptions = computed(() => baseOptions(fmtNumber))
-const onTimeOptions = computed(() => baseOptions(fmtPct))
-const exceptionsOptions = computed(() => baseOptions(fmtNumber))
+const shipmentsData = computed(() => metrics.map((m) => totalShipments(m)))
+const onTimeData = computed(() => metrics.map((m) => m.onTimeDeliveryRate))
+const exceptionsData = computed(() =>
+  metrics.map((m) => m.openExceptions.length),
+)
 
 // Regional performance summary — averaged/summed across selection
 interface RegionRow {
@@ -395,59 +270,45 @@ const regionalView = computed<RegionRow[]>(() => {
 
       <!-- Shipment volume chart -->
       <v-col cols="12" md="6">
-        <v-card color="surface" class="pa-5 h-100 dash-card">
-          <div class="d-flex align-center mb-4">
-            <v-icon
-              icon="mdi-truck-fast-outline"
-              color="#ffb74d"
-              class="mr-2"
-            />
-            <span class="text-subtitle-1 font-weight-medium">
-              Monthly Shipment Volume
-            </span>
-          </div>
-          <div style="height: 280px">
-            <Line :data="shipmentsChart" :options="shipmentsOptions" />
-          </div>
-        </v-card>
+        <LineChartCard
+          title="Monthly Shipment Volume"
+          icon="mdi-truck-fast-outline"
+          :color="palette.shipments"
+          dataset-label="Total Shipments"
+          :labels="labels"
+          :data="shipmentsData"
+          :formatter="fmtNumber"
+          :highlight-index="isAll ? -1 : selectedIndex"
+        />
       </v-col>
 
       <!-- On-Time Delivery chart -->
       <v-col cols="12" md="6">
-        <v-card color="surface" class="pa-5 h-100 dash-card">
-          <div class="d-flex align-center mb-4">
-            <v-icon
-              icon="mdi-clock-check-outline"
-              color="#4dd0e1"
-              class="mr-2"
-            />
-            <span class="text-subtitle-1 font-weight-medium">
-              On-Time Delivery Rate
-            </span>
-          </div>
-          <div style="height: 280px">
-            <Line :data="onTimeChart" :options="onTimeOptions" />
-          </div>
-        </v-card>
+        <LineChartCard
+          title="On-Time Delivery Rate"
+          icon="mdi-clock-check-outline"
+          :color="palette.onTime"
+          dataset-label="On-Time Delivery Rate"
+          :labels="labels"
+          :data="onTimeData"
+          :formatter="fmtPct"
+          :highlight-index="isAll ? -1 : selectedIndex"
+        />
       </v-col>
 
       <!-- Full-width open exceptions area chart -->
       <v-col cols="12">
-        <v-card color="surface" class="pa-5 dash-card">
-          <div class="d-flex align-center mb-4">
-            <v-icon
-              icon="mdi-alert-octagon-outline"
-              color="#ef5350"
-              class="mr-2"
-            />
-            <span class="text-subtitle-1 font-weight-medium">
-              Open Exceptions Trend
-            </span>
-          </div>
-          <div style="height: 280px">
-            <Line :data="exceptionsChart" :options="exceptionsOptions" />
-          </div>
-        </v-card>
+        <LineChartCard
+          title="Open Exceptions Trend"
+          icon="mdi-alert-octagon-outline"
+          :color="palette.exceptions"
+          dataset-label="Open Exceptions"
+          :labels="labels"
+          :data="exceptionsData"
+          :formatter="fmtNumber"
+          fill
+          :highlight-index="isAll ? -1 : selectedIndex"
+        />
       </v-col>
 
       <!-- Full-width regional performance table -->
