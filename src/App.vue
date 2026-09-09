@@ -10,7 +10,7 @@ const { selectedMonth, monthOptions } = useDashboardFilter()
       <v-container class="d-flex align-center py-0 px-6 px-md-8" fluid>
         <v-app-bar-title class="font-weight-medium">
           <v-icon icon="mdi-view-dashboard-outline" class="mr-2 text-primary" />
-          My Dashboard
+          FastForward Logistics
         </v-app-bar-title>
         <v-spacer />
         <v-select
