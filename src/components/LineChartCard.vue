@@ -154,6 +154,8 @@ const chartOptions = computed<ChartOptions<'line'>>(() => ({
     <div class="d-flex align-center mb-4">
       <v-icon :icon="icon" :color="color" class="mr-2" />
       <span class="text-subtitle-1 font-weight-medium">{{ title }}</span>
+      <v-spacer />
+      <slot name="actions" />
     </div>
     <div :style="{ height: `${height}px` }">
       <Line :data="chartData" :options="chartOptions" />

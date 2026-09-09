@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import LineChartCard from '../components/LineChartCard.vue'
 import {
   useDashboardFilter,
@@ -164,11 +164,85 @@ const summaryCards = computed<SummaryCard[]>(() => {
 
 // Highlight the selected month on the charts
 const labels = computed(() => metrics.map((m) => m.label))
-const shipmentsData = computed(() => metrics.map((m) => totalShipments(m)))
 const onTimeData = computed(() => metrics.map((m) => m.onTimeDeliveryRate))
 const exceptionsData = computed(() =>
   metrics.map((m) => m.openExceptions.length),
 )
+
+// Shipment volume period selector
+type ShipmentPeriod = 'daily' | 'weekly' | 'monthly' | 'quarterly'
+
+const shipmentPeriod = ref<ShipmentPeriod>('weekly')
+
+const shipmentPeriodOptions: Array<{ label: string; value: ShipmentPeriod }> = [
+  { label: 'Daily', value: 'daily' },
+  { label: 'Weekly', value: 'weekly' },
+  { label: 'Monthly', value: 'monthly' },
+  { label: 'Quarterly', value: 'quarterly' },
+]
+
+// 2025 is not a leap year
+const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+
+interface Series {
+  labels: string[]
+  data: number[]
+}
+
+const shipmentSeries = computed<Series>(() => {
+  const monthly = metrics.map((m) => totalShipments(m))
+
+  if (shipmentPeriod.value === 'monthly') {
+    return { labels: labels.value, data: monthly }
+  }
+
+  if (shipmentPeriod.value === 'quarterly') {
+    return {
+      labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+      data: [0, 1, 2, 3].map((q) =>
+        monthly.slice(q * 3, q * 3 + 3).reduce((s, v) => s + v, 0),
+      ),
+    }
+  }
+
+  if (shipmentPeriod.value === 'weekly') {
+    const wLabels: string[] = []
+    const wData: number[] = []
+    metrics.forEach((m, i) => {
+      const weeks = Math.round(daysInMonth[i] / 7) // 4 or 5
+      const perWeek = Math.round(monthly[i] / weeks)
+      for (let w = 1; w <= weeks; w++) {
+        wLabels.push(`${m.label} W${w}`)
+        wData.push(perWeek)
+      }
+    })
+    return { labels: wLabels, data: wData }
+  }
+
+  // daily
+  const dLabels: string[] = []
+  const dData: number[] = []
+  metrics.forEach((m, i) => {
+    const perDay = Math.round(monthly[i] / daysInMonth[i])
+    for (let d = 1; d <= daysInMonth[i]; d++) {
+      dLabels.push(`${m.label} ${d}`)
+      dData.push(perDay)
+    }
+  })
+  return { labels: dLabels, data: dData }
+})
+
+// Only highlight the point when we're on the monthly view and a month is selected
+const shipmentsHighlightIndex = computed(() =>
+  !isAll.value && shipmentPeriod.value === 'monthly' ? selectedIndex.value : -1,
+)
+
+const shipmentsChartTitle = computed(() => {
+  const suffix =
+    shipmentPeriod.value.charAt(0).toUpperCase() +
+    shipmentPeriod.value.slice(1)
+  return `${suffix} Shipment Volume`
+})
 
 // Regional performance summary — averaged/summed across selection
 interface RegionRow {
@@ -271,15 +345,36 @@ const regionalView = computed<RegionRow[]>(() => {
       <!-- Shipment volume chart -->
       <v-col cols="12" md="6">
         <LineChartCard
-          title="Monthly Shipment Volume"
+          :title="shipmentsChartTitle"
           icon="mdi-truck-fast-outline"
           :color="palette.shipments"
-          dataset-label="Total Shipments"
-          :labels="labels"
-          :data="shipmentsData"
+          dataset-label="Shipments"
+          :labels="shipmentSeries.labels"
+          :data="shipmentSeries.data"
           :formatter="fmtNumber"
-          :highlight-index="isAll ? -1 : selectedIndex"
-        />
+          :highlight-index="shipmentsHighlightIndex"
+        >
+          <template #actions>
+            <v-btn-toggle
+              v-model="shipmentPeriod"
+              density="compact"
+              variant="outlined"
+              mandatory
+              divided
+              color="primary"
+            >
+              <v-btn
+                v-for="opt in shipmentPeriodOptions"
+                :key="opt.value"
+                :value="opt.value"
+                size="x-small"
+                class="text-caption"
+              >
+                {{ opt.label }}
+              </v-btn>
+            </v-btn-toggle>
+          </template>
+        </LineChartCard>
       </v-col>
 
       <!-- On-Time Delivery chart -->
