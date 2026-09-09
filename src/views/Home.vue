@@ -189,6 +189,58 @@ interface Series {
   data: number[]
 }
 
+// Deterministic pseudo-random generator so daily/weekly values are stable
+// between re-renders and view toggles, but still look naturally varied.
+function mulberry32(seed: number) {
+  let a = seed >>> 0
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0
+    let t = a
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+/**
+ * Distribute `total` across `parts` buckets with naturally varied weights.
+ * Weekly weights lean slightly higher mid-month; daily weights include a
+ * weekday/weekend cycle so weekends are lighter. Values are rounded and the
+ * remainder is applied to the last bucket so the sum matches `total`.
+ */
+function distribute(
+  total: number,
+  parts: number,
+  seed: number,
+  pattern: 'week' | 'day',
+): number[] {
+  const rand = mulberry32(seed)
+  const weights: number[] = []
+  for (let i = 0; i < parts; i++) {
+    if (pattern === 'day') {
+      // Weekday/weekend rhythm: weekdays 1.0, weekends ~0.55
+      // 2025-01-01 was a Wednesday, so start dayOfWeek at 2 for month index 0.
+      // We use i alone since we only need a repeating pattern, not a real date.
+      const dow = i % 7
+      const base = dow === 5 || dow === 6 ? 0.55 : 1.0
+      // ±15% jitter
+      weights.push(base * (0.85 + rand() * 0.3))
+    } else {
+      // Weekly: gentle mid-month bump, ±20% jitter
+      const mid = (parts - 1) / 2
+      const bump = 1 - Math.abs(i - mid) / (parts * 2) // 0.75..1
+      weights.push(bump * (0.8 + rand() * 0.4))
+    }
+  }
+  const sum = weights.reduce((s, w) => s + w, 0)
+  const raw = weights.map((w) => (w / sum) * total)
+  const rounded = raw.map((v) => Math.round(v))
+  // Correct rounding drift so the parts sum back to the original total
+  const drift = total - rounded.reduce((s, v) => s + v, 0)
+  rounded[rounded.length - 1] += drift
+  return rounded
+}
+
 const shipmentSeries = computed<Series>(() => {
   const monthly = metrics.map((m) => totalShipments(m))
 
@@ -210,10 +262,11 @@ const shipmentSeries = computed<Series>(() => {
     const wData: number[] = []
     metrics.forEach((m, i) => {
       const weeks = Math.round(daysInMonth[i] / 7) // 4 or 5
-      const perWeek = Math.round(monthly[i] / weeks)
-      for (let w = 1; w <= weeks; w++) {
-        wLabels.push(`${m.label} W${w}`)
-        wData.push(perWeek)
+      // Seed per month so each month has its own but stable variation
+      const values = distribute(monthly[i], weeks, i * 1000 + 7, 'week')
+      for (let w = 0; w < weeks; w++) {
+        wLabels.push(`${m.label} W${w + 1}`)
+        wData.push(values[w])
       }
     })
     return { labels: wLabels, data: wData }
@@ -223,10 +276,10 @@ const shipmentSeries = computed<Series>(() => {
   const dLabels: string[] = []
   const dData: number[] = []
   metrics.forEach((m, i) => {
-    const perDay = Math.round(monthly[i] / daysInMonth[i])
-    for (let d = 1; d <= daysInMonth[i]; d++) {
-      dLabels.push(`${m.label} ${d}`)
-      dData.push(perDay)
+    const values = distribute(monthly[i], daysInMonth[i], i * 1000 + 31, 'day')
+    for (let d = 0; d < daysInMonth[i]; d++) {
+      dLabels.push(`${m.label} ${d + 1}`)
+      dData.push(values[d])
     }
   })
   return { labels: dLabels, data: dData }
